@@ -24,23 +24,22 @@
  */
 package tidal.tern;
 
-import android.os.Handler;
-import android.os.Message;
-import android.view.View;
-import android.view.MotionEvent;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.graphics.Canvas;
-import android.graphics.Paint.Style;
-import android.graphics.drawable.Drawable;
-import android.util.AttributeSet;
-import android.util.Log;
-import android.content.Context;
-import android.content.res.Resources;
+import java.util.ArrayList;
 
 import tidal.tern.rt.Debugger;
 import tidal.tern.rt.Process;
+import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
+import android.media.AudioManager;
+import android.media.SoundPool;
+import android.os.Handler;
+import android.os.Message;
+import android.util.AttributeSet;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
 
 
 /**
@@ -50,10 +49,10 @@ import tidal.tern.rt.Process;
  */
 public class Roberto extends View implements Debugger {
    
-   public static final String TAG = "Roberto";
+   public final String TAG = "Roberto";
    
    /** Name of the current action */
-   protected String message = "";
+   protected String message = null;
    
    /** Roberto picture to draw */
    protected Drawable pose = null;
@@ -67,6 +66,30 @@ public class Roberto extends View implements Debugger {
    /** Link back to the main activity */
    protected Tern tern = null;
    
+   private final int Duration = 200;
+	
+   private boolean isPlaying = false;
+   private ArrayList<Drawable> DrawableList = new ArrayList<Drawable>();
+   //private ArrayList<Drawable> PlayingList = new ArrayList<Drawable>();
+   //private ArrayList[] sequence = new ArrayList[9];
+   //private ArrayList<ArrayList<Drawable>> sequenceList = new ArrayList<ArrayList<Drawable>>();
+   private ArrayList<String> sequenceList2 = new ArrayList<String>();
+   private ArrayList<Integer> sequenceCounter = new ArrayList<Integer>();
+   private int listCounter = 0; 
+   //private ArrayList<int> idList = new ArrayList<int>();
+   private Drawable entry = null;
+   
+   private int frame = 0;
+   private long last_tick = 0;
+   boolean newPose = true;
+   
+   private SoundPool sounds;
+   private int beepSound;
+   
+   private Drawable logo;
+   private Drawable button;
+
+   
    
    public Roberto(Context context) {
       super(context);
@@ -75,6 +98,12 @@ public class Roberto extends View implements Debugger {
    
    public Roberto(Context context, AttributeSet attribs) {
       super(context, attribs);
+      sounds = new SoundPool(10, AudioManager.STREAM_MUSIC,0);
+      beepSound = sounds.load(context, R.raw.beep, 1);
+      Resources res = getContext().getResources();
+      logo = res.getDrawable(R.drawable.logo);
+      button = res.getDrawable(R.drawable.play_button_up);
+
    }
    
    
@@ -96,20 +125,18 @@ public class Roberto extends View implements Debugger {
 
    
    protected void onDraw(Canvas canvas) {
+	  
       int w = getWidth();
       int h = getHeight();
       int dx, dy, dw, dh;
       float ds;
-      
-      Resources res = getResources();
-      Drawable logo = res.getDrawable(R.drawable.logo);
-      Drawable button = res.getDrawable(R.drawable.play_button_up);
-
+      String currentPose;
+      Drawable current = null;
       // clear background 
       canvas.drawRGB(210, 210, 210);
       
       if (!this.running) {
-
+    	 
          // draw logo
          dw = logo.getIntrinsicWidth();
          dh = logo.getIntrinsicHeight();
@@ -125,26 +152,135 @@ public class Roberto extends View implements Debugger {
          dx = w - dw - 10;
          dy = h - dh - 10;
          button.setBounds(dx, dy, dx + dw, dy + dh);
-         button.draw(canvas);
+         button.draw(canvas);  
       }
       
       // Draw roberto 
-      else if (this.pose != null) {
-         dw = pose.getIntrinsicWidth() / 3;
-         dh = pose.getIntrinsicHeight() / 3;
-         dx = w/2 - dw/2;
-         dy = h/2 - dh/2;
-         pose.setBounds(dx, dy, dx + dw, dy + dh);
-         pose.draw(canvas);
+      else if (isPlaying) {
+    	  
+    	  //if the program has a new pose, get it's name and number of frames, 
+    	  //and populate a list of drawables to animate the new pose.
+    	  if (newPose) {
+    		  currentPose = sequenceList2.get(listCounter);
+    		  int total = sequenceCounter.get(listCounter);
+    		  Log.i(TAG, currentPose + " " + total);
+    		  listCounter++;
+    		  frame = 0;
+    		  DrawableList.clear();
+    		  
+    		  for (int x=1; x<=total; x++) {
+    			  String name = currentPose + "0" + x;
+    			  int res_id = getContext().getResources().getIdentifier(name, "drawable", "tidal.tern");   
+			      entry = getContext().getResources().getDrawable(res_id);
+			      try { DrawableList.add(entry); }
+			      catch (Exception r) { Log.i(TAG, "Not able to add to list: " + name);}
+			      entry.setCallback(null);
+			      entry = null;
+			   }
+    		  
+    		  newPose = false;
+    	  }
+    	  
+    	  long elapsed = (System.currentTimeMillis() - last_tick);
+          
+          if (elapsed >= Duration) {
+        	  if (frame < DrawableList.size()) {
+        		  last_tick = System.currentTimeMillis();
+                  current = DrawableList.get(frame);
+                  dw = current.getIntrinsicWidth() / 2;
+                  dh = current.getIntrinsicHeight() / 2;
+                  dx = w/2 - dw/2;
+                  dy = h/2 - dh/2;
+                  current.setBounds(dx, dy, dx + dw, dy + dh);
+                  current.draw(canvas);
+                  current.setCallback(null);
+       	       	  current = null;
+                  frame++;
+                  
+                  if (frame < DrawableList.size())//second check after increment to hold on to the last frame
+                  repaint();  
+        	  }
+        	  
+        	  else { isPlaying = false;}
+            	  
+          }
+          
+          else { //within duration
+        	  if (frame < DrawableList.size()) {
+        		  current = DrawableList.get(frame);
+                  dw = current.getIntrinsicWidth() / 2;
+                  dh = current.getIntrinsicHeight() / 2;
+                  dx = w/2 - dw/2;
+                  dy = h/2 - dh/2;
+                  current.setBounds(dx, dy, dx + dw, dy + dh);
+                  current.draw(canvas);
+                  current.setCallback(null);
+       	       	  current = null;
+                  repaint();
+        	  }     
+          }
+      }//isPlaying
+     /** else if (isPlaying) {
+    	  
+    	  if (newPose) {
+    		  ///Log.i(TAG, "starting animation for " + this.message);
+    		  PlayingList = sequenceList.get(listCounter);
+    		  listCounter++;
+    		  frame = 0;
+    		  sounds.play(beepSound, 1.0f, 1.0f, 0, 0, 1.0f);
+    	  }
+          
+          long elapsed = (System.currentTimeMillis() - last_tick);
+          
+          if (elapsed >= Duration) {
+        	  
+        	  last_tick = System.currentTimeMillis();
+              //current = DrawableList.get(frame);
+              current = PlayingList.get(frame);   
+              dw = current.getIntrinsicWidth() / 2;
+              dh = current.getIntrinsicHeight() / 2;
+              dx = w/2 - dw/2;
+              dy = h/2 - dh/2;
+              current.setBounds(dx, dy, dx + dw, dy + dh);
+              current.draw(canvas);
+              current.setCallback(null);
+   	       	  current = null;
 
-         Paint font = new Paint(Paint.ANTI_ALIAS_FLAG);
-         font.setColor(Color.BLACK);
-         font.setStyle(Style.FILL);
-         font.setTextSize(40);
-         font.setTextAlign(Paint.Align.CENTER);
-         canvas.drawText(this.message, w/2, h - 25, font);
-      }
+              frame++;
+              newPose = false;
+              //if (frame < DrawableList.size())
+              if (frame < PlayingList.size())
+            	  repaint();
+            	  //postInvalidate();
+              else {
+            	  isPlaying = false;
+            	  animation_completed = true;
+            	  PlayingList.clear();
+            	  PlayingList = null;
+              }
+            	  
+          }
+          else {
+              // current = DrawableList.get(frame);
+        	  current = PlayingList.get(frame);
+              dw = current.getIntrinsicWidth() / 2;
+              dh = current.getIntrinsicHeight() / 2;
+              dx = w/2 - dw/2;
+              dy = h/2 - dh/2;
+              current.setBounds(dx, dy, dx + dw, dy + dh);
+              current.draw(canvas);
+              current.setCallback(null);
+   	       	  current = null;
+              newPose = false;
+              //postInvalidate();   
+              repaint();
+                
+          }//within duration
+          
+      }//*/
+   
    }
+   
    
    
 /**
@@ -162,73 +298,112 @@ public class Roberto extends View implements Debugger {
    };
    
    
-   private void changePicture(int d) {
-      Resources res = getResources();
-      this.pose = (d > 0)? res.getDrawable(d) : null;
-      repaint();
+   protected void changePicture(String img, int f) {
+	   if (f>0) { 
+		   sequenceList2.add(img);
+		   sequenceCounter.add(f);
+		   Log.i(TAG,"SEQUENCE ADDED for " +img);
+		   isPlaying = true;
+		   newPose = true;
+	   }
+	   
+	   Log.i(TAG,"sequence= "+ sequenceList2.size());
+	   repaint();
+	   /*
+	   if (f > 0) {
+		   Log.i(TAG, "change picture");
+		   //DrawableList.clear();
+		   
+		   for (int x = 1; x <= f; x++) {
+		       String name = img+ "0" + x;
+		       int res_id = getContext().getResources().getIdentifier(name, "drawable", "tidal.tern");   
+		       entry = getContext().getResources().getDrawable(res_id);
+		       	
+		       try {
+		    	   DrawableList.add(entry);
+		       }
+		       
+		       catch (Exception r) {
+		       	Log.i(TAG, "Not able to add to list: " + name);
+		       }
+		       entry.setCallback(null);
+		       entry = null;
+	      }
+		   
+		  try {
+			  sequenceList.add(DrawableList);
+		  }
+		  catch (Exception r) {
+		       	Log.i(TAG, "sequence list error on " + img);
+		       }
+		  DrawableList = new ArrayList<Drawable>();
+	      isPlaying = true;
+	      newPose = true;
+	   }
+      repaint();//*/
    }
-   
+     
    
    public int doJump(int [] args) {
-      changePicture(R.drawable.r_jump);
-      this.message = "Jump";
-      return 0;
+	   changePicture("jump",5);  
+       //this.message = "Jump";   	   
+       return 0;
    }
    
    
    public int doRun(int [] args) {
-      changePicture(R.drawable.r_run);
-      this.message = "Run";
-      return 0;
+	   changePicture("run",1);  
+       //this.message = "Run";   	   
+       return 0;
    }
    
    
    public int doWalk(int [] args) {
-      changePicture(R.drawable.r_walk);
-      this.message = "Walk";
+	  changePicture("walk",5);
+      //this.message = "Walk";   	   
       return 0;
    }
    
    
    public int doWiggle(int [] args) {
-      changePicture(R.drawable.r_wiggle);
-      this.message = "Wiggle";
+	  changePicture("wiggle",6);
+      //this.message = "Wiggle";   	   
       return 0;
    }
    
    
    public int doSleep(int [] args) {
-      changePicture(R.drawable.r_sleep);
-      this.message = "Sleep";
-      return 0;
+	   changePicture("sleep",1);  
+       //this.message = "Sleep";   	   
+       return 0;
    }
    
    
    public int doSit(int [] args) {
-      changePicture(R.drawable.r_sit);
-      this.message = "Sit";
-      return 0;
+	   changePicture("jump",5);  
+       //this.message = "Sit";   	   
+       return 0;
    }
    
    
    public int doYawn(int [] args) {
-      changePicture(R.drawable.r_yawn);
-      this.message = "Yawn";
-      return 0;
+	   changePicture("yawn",1);  
+       //this.message = "Yawn";   	   
+       return 0;
    }
    
    
    public int doStand(int [] args) {
-      changePicture(R.drawable.r_stand);
-      this.message = "Stand";
-      return 0;
+	   changePicture("stand",1);  
+       //this.message = "Stand";   	   
+       return 0;
    }
    
    
    public int doSpin(int [] args) {
-      changePicture(R.drawable.r_spin);
-      this.message = "Spin";
-      return 0;
+	   changePicture("spin",6);  
+       //this.message = "Spin";   	   
+       return 0;
    }
    
    
@@ -250,8 +425,20 @@ public class Roberto extends View implements Debugger {
    }
    
    public void processStopped(Process p) {
-      this.running = false;
-      changePicture(-1);
+	   Log.i(TAG,"processStopped Called");
+	   //this.running = false;  
+	   //changePicture("null",-1);
+      
+   }
+   
+   public void clearAnimation() {
+	   //newPose = false;
+	   this.running = false;
+	   sequenceList2.clear();
+	   sequenceCounter.clear();
+	   DrawableList.clear();
+	   listCounter = 0;
+	   frame = 0;
    }
    
    public void trace(Process p, String message) { }

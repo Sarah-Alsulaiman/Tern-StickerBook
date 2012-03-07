@@ -24,56 +24,50 @@
  */
 package tidal.tern;
 
-import java.io.File;
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
+import java.io.InputStreamReader;
 
-import android.net.Uri;
+import tidal.tern.compiler.CompileException;
+import tidal.tern.compiler.Program;
+import tidal.tern.compiler.StatementFactory;
+import tidal.tern.compiler.TangibleCompiler;
+import tidal.tern.rt.Interpreter;
+import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.MemoryInfo;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.res.XmlResourceParser;
 import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
+import android.provider.MediaStore;
+import android.provider.MediaStore.Images.Media;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
 
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.app.Activity;
-import android.app.ProgressDialog;
-import android.os.Bundle;
-import android.provider.MediaStore.Images.Media;
-
-import android.provider.MediaStore;
-import android.util.Log;
-import android.os.Handler;
-import android.os.Message;
-import android.os.Environment;
-
-import topcodes.*;
-import tidal.tern.compiler.*;
-import tidal.tern.rt.Interpreter;
-import tidal.tern.rt.Process;
-
 
 
 public class Tern extends Activity implements OnClickListener, Runnable {
    
-   public static final String TAG = "TernMob";
+   public final String TAG = "TernMob";
    
-   public static final int CAMERA_PIC_REQUEST = 2500;
+   public final int CAMERA_PIC_REQUEST = 2500;
    
-   public static final int COMPILE_SUCCESS = 100;
-   public static final int COMPILE_FAILURE = 101;
+   public final int COMPILE_SUCCESS = 100;
+   public final int COMPILE_FAILURE = 101;
    
    
-   protected File path = Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_PICTURES);
+   protected File path = Environment.getExternalStorageDirectory();//Environment.DIRECTORY_PICTURES
    protected File temp = new File(path, "capture.jpg");
 
 
@@ -138,6 +132,21 @@ public class Tern extends Activity implements OnClickListener, Runnable {
       super.onPause();
    }
     
+   @Override
+   public void onBackPressed() {
+	   roberto.clearAnimation();
+	   Log.i(TAG,"animation cleared");
+	   this.interp.clear();
+	   roberto.changePicture("null",-1); 
+	   
+	  /** if (roberto.running) {
+		   roberto.running = false;
+	   }
+	   else
+		   super.onBackPressed();//*/
+	   
+   return;
+   }//*/
     
 //----------------------------------------------------------------
 // onClick -- Called by the compile/camera button
@@ -174,6 +183,12 @@ public class Tern extends Activity implements OnClickListener, Runnable {
                      this.bitmap = null;
                   }
                   this.bitmap = Media.getBitmap(getContentResolver(), Uri.fromFile(temp) );
+                  
+                  /*ActivityManager activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+                  MemoryInfo mi = new MemoryInfo();
+                  activityManager.getMemoryInfo(mi);
+                  Log.i("MEMORY FREE!!!: ", "" + mi.availMem);*/
+                  
                   startCompile();
                } catch (FileNotFoundException e) {
                   Log.e(TAG, "File not found " + e);
@@ -240,6 +255,22 @@ public class Tern extends Activity implements OnClickListener, Runnable {
       }
    };
    
+   public void refresh() {
+	  
+	   this.finish();
+	   Intent refresh = new Intent(Tern.this, Tern.class);
+	   startActivity(refresh);
+	   //*/
+	   /*Intent i = getBaseContext().getPackageManager()
+			      .getLaunchIntentForPackage(getBaseContext().getPackageName() );
+
+	   i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK );
+	   startActivity(i);//*/
+	   
+	 // this.onCreate(null);
+	 
+	  
+   }
    
    private String loadDriverFile() {
       String result = "";

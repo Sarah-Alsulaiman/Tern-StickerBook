@@ -25,10 +25,11 @@
 package tidal.tern.compiler;
 
 import java.util.List;
-import topcodes.*;
-import android.content.res.XmlResourceParser;
+
 import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
+
+import topcodes.TopCode;
+import android.content.res.XmlResourceParser;
 
 
 

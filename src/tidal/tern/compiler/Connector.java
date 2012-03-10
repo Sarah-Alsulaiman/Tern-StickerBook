@@ -24,8 +24,7 @@
  */
 package tidal.tern.compiler;
 
-import topcodes.*;
-import java.io.PrintWriter;
+import topcodes.TopCode;
 
 
 /**

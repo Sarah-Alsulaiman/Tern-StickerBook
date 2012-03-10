@@ -25,7 +25,6 @@
 package tidal.tern;
 
 import java.util.ArrayList;
-
 import tidal.tern.rt.Debugger;
 import tidal.tern.rt.Process;
 import android.content.Context;
@@ -66,28 +65,47 @@ public class Roberto extends View implements Debugger {
    /** Link back to the main activity */
    protected Tern tern = null;
    
+   /** Duration of frames in milliseconds */
    private final int Duration = 200;
 	
+   /** Is the animation playing */
    private boolean isPlaying = false;
-   private ArrayList<Drawable> DrawableList = new ArrayList<Drawable>();
-   //private ArrayList<Drawable> PlayingList = new ArrayList<Drawable>();
-   //private ArrayList[] sequence = new ArrayList[9];
-   //private ArrayList<ArrayList<Drawable>> sequenceList = new ArrayList<ArrayList<Drawable>>();
-   private ArrayList<String> sequenceList2 = new ArrayList<String>();
-   private ArrayList<Integer> sequenceCounter = new ArrayList<Integer>();
-   private int listCounter = 0; 
-   //private ArrayList<int> idList = new ArrayList<int>();
-   private Drawable entry = null;
    
+   /** Populate the frames in a list of Drawables */
+   private ArrayList<Drawable> DrawableList = new ArrayList<Drawable>();
+   
+   /** List of strings to hold the program */
+   private ArrayList<String> sequenceList2 = new ArrayList<String>();
+   
+   /** List of integers to hold the number of frames for each pose */
+   private ArrayList<Integer> sequenceCounter = new ArrayList<Integer>();
+   
+   /** Lists counter */
+   private int listCounter = 0;
+   
+   /** Current frame index to be drawn */
    private int frame = 0;
    private long last_tick = 0;
+   
+   /** Is there a new pose to be drawn */
    boolean newPose = true;
+   
+   /** Replay button clicked */
+   private boolean replay_request = false;
+   
+   /** Animation completed */
+   private boolean stopped = false;
    
    private SoundPool sounds;
    private int beepSound;
-   
+   private Drawable entry = null;
    private Drawable logo;
    private Drawable button;
+   private Drawable replay;
+   
+   
+   //private ArrayList<Drawable> PlayingList = new ArrayList<Drawable>();
+   //private ArrayList<ArrayList<Drawable>> sequenceList = new ArrayList<ArrayList<Drawable>>();
 
    
    
@@ -103,6 +121,7 @@ public class Roberto extends View implements Debugger {
       Resources res = getContext().getResources();
       logo = res.getDrawable(R.drawable.logo);
       button = res.getDrawable(R.drawable.play_button_up);
+      replay = res.getDrawable(R.drawable.replay);
 
    }
    
@@ -116,16 +135,18 @@ public class Roberto extends View implements Debugger {
       int action = event.getAction();
       if (action == MotionEvent.ACTION_DOWN) {
          this.tsensor = true;
+         if (stopped) {  stopped = false; replay_request = true; replay(); }
+		   
       } else if (action == MotionEvent.ACTION_UP) {
          if (! running ) tern.onClick(this);
       }
-      invalidate();
+      //invalidate();
       return true;
    }
 
    
    protected void onDraw(Canvas canvas) {
-	  
+	   
       int w = getWidth();
       int h = getHeight();
       int dx, dy, dw, dh;
@@ -168,7 +189,7 @@ public class Roberto extends View implements Debugger {
     		  frame = 0;
     		  DrawableList.clear();
     		  
-    		  for (int x=1; x<=total; x++) {
+    		  for (int x=1; x <= total; x++) {
     			  String name = currentPose + "0" + x;
     			  int res_id = getContext().getResources().getIdentifier(name, "drawable", "tidal.tern");   
 			      entry = getContext().getResources().getDrawable(res_id);
@@ -179,10 +200,11 @@ public class Roberto extends View implements Debugger {
 			   }
     		  
     		  newPose = false;
+    		  sounds.play(beepSound, 1.0f, 1.0f, 0, 0, 1.0f);
     	  }
     	  
     	  long elapsed = (System.currentTimeMillis() - last_tick);
-          
+    	  
           if (elapsed >= Duration) {
         	  if (frame < DrawableList.size()) {
         		  last_tick = System.currentTimeMillis();
@@ -199,6 +221,18 @@ public class Roberto extends View implements Debugger {
                   
                   if (frame < DrawableList.size())//second check after increment to hold on to the last frame
                   repaint();  
+                  else { 
+                	  if (replay_request){ 
+                		  if (listCounter < sequenceList2.size()) {
+                			  newPose = true;
+                    		  isPlaying = true;
+                    		  stopped = false;
+                    		  repaint();
+                		  }
+                		  else { stopped = true; repaint(); }
+                	  }
+                	  
+                  }//*/
         	  }
         	  
         	  else { isPlaying = false;}
@@ -219,7 +253,20 @@ public class Roberto extends View implements Debugger {
                   repaint();
         	  }     
           }
+          
       }//isPlaying
+      
+      if (stopped) {
+  		  // draw replay button
+    	  dw = replay.getIntrinsicWidth();
+          dh = replay.getIntrinsicHeight();
+          ds = Math.min(0.8f, 0.8f * w / dw);
+          dw *= ds;
+          dh *= ds;
+          replay.setBounds(w/2 - dw/2, 70, w/2 + dw/2, 70 + dh);
+          replay.draw(canvas);
+          replay_request = false;
+  	  }
      /** else if (isPlaying) {
     	  
     	  if (newPose) {
@@ -417,7 +464,7 @@ public class Roberto extends View implements Debugger {
       tsensor = false;
       return result;
    }
-   
+      
    
    public void processStarted(Process p) {
       this.running = true;
@@ -426,9 +473,19 @@ public class Roberto extends View implements Debugger {
    
    public void processStopped(Process p) {
 	   Log.i(TAG,"processStopped Called");
-	   //this.running = false;  
-	   //changePicture("null",-1);
-      
+	   Log.i(TAG, "sequence = " + sequenceList2.size());
+	   Log.i(TAG, "Counter = " + listCounter);
+	   stopped = true;  
+	   isPlaying = false;
+	   repaint();
+   }
+   
+   private void replay() {
+	   Log.i(TAG, "replay function called");
+	   listCounter = 0;
+	   isPlaying = true;
+	   newPose = true;
+	   repaint();   
    }
    
    public void clearAnimation() {
@@ -439,6 +496,7 @@ public class Roberto extends View implements Debugger {
 	   DrawableList.clear();
 	   listCounter = 0;
 	   frame = 0;
+	   stopped = false;
    }
    
    public void trace(Process p, String message) { }

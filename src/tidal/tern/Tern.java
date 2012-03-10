@@ -36,8 +36,6 @@ import tidal.tern.compiler.StatementFactory;
 import tidal.tern.compiler.TangibleCompiler;
 import tidal.tern.rt.Interpreter;
 import android.app.Activity;
-import android.app.ActivityManager;
-import android.app.ActivityManager.MemoryInfo;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.res.XmlResourceParser;

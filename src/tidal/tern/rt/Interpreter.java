@@ -217,7 +217,7 @@ public class Interpreter implements Runnable {
          if (stop) break;
          
          // breathe
-         try { Thread.sleep(2000); }
+         try { Thread.sleep(1300); }
          catch (InterruptedException ix) { ; }
 
          // update timers

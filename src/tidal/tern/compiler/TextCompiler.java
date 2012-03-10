@@ -25,15 +25,20 @@
 package tidal.tern.compiler;
 
 
-import tidal.tern.compiler.parser.*;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.io.IOException;
-import java.util.Map;
 import java.util.LinkedList;
+import java.util.Map;
 
-import net.percederberg.grammatica.parser.*;
+import net.percederberg.grammatica.parser.Node;
+import net.percederberg.grammatica.parser.ParseException;
+import net.percederberg.grammatica.parser.ParserCreationException;
+import net.percederberg.grammatica.parser.ParserLogException;
+import net.percederberg.grammatica.parser.Production;
+import net.percederberg.grammatica.parser.Token;
+import tidal.tern.compiler.parser.TernAnalyzer;
+import tidal.tern.compiler.parser.TernParser;
 
 
 /**

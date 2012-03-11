@@ -217,7 +217,7 @@ public class Tern extends Activity implements OnClickListener, Runnable {
       }
       this.pd.dismiss();
       this.compiling = false;
-      this.roberto.invalidate();
+      //this.roberto.invalidate();
       
       if (!success) return;
       
@@ -253,22 +253,6 @@ public class Tern extends Activity implements OnClickListener, Runnable {
       }
    };
    
-   public void refresh() {
-	  
-	   this.finish();
-	   Intent refresh = new Intent(Tern.this, Tern.class);
-	   startActivity(refresh);
-	   //*/
-	   /*Intent i = getBaseContext().getPackageManager()
-			      .getLaunchIntentForPackage(getBaseContext().getPackageName() );
-
-	   i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK );
-	   startActivity(i);//*/
-	   
-	 // this.onCreate(null);
-	 
-	  
-   }
    
    private String loadDriverFile() {
       String result = "";

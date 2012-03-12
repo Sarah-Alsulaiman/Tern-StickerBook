@@ -135,13 +135,9 @@ public class Tern extends Activity implements OnClickListener, Runnable {
 	   roberto.clearAnimation();
 	   Log.i(TAG,"animation cleared");
 	   this.interp.clear();
+	   //roberto.reIntrep = false;//ADDED
+	   //roberto.running = false; //ADDED
 	   roberto.changePicture("null",-1); 
-	   
-	  /** if (roberto.running) {
-		   roberto.running = false;
-	   }
-	   else
-		   super.onBackPressed();//*/
 	   
    return;
    }//*/
@@ -203,7 +199,7 @@ public class Tern extends Activity implements OnClickListener, Runnable {
       return this.program;
    }
    
-   protected void startCompile() {
+   public void startCompile() {
       this.compiling = true;      
       this.pd = ProgressDialog.show(this, "Tern", "Compiling Program...", true, false);
       (new Thread(this)).start();
@@ -212,8 +208,8 @@ public class Tern extends Activity implements OnClickListener, Runnable {
    
    protected void finishCompile(boolean success) {
       if (this.bitmap != null) {
-         this.bitmap.recycle();
-         this.bitmap = null;
+        // this.bitmap.recycle();
+        // this.bitmap = null;
       }
       this.pd.dismiss();
       this.compiling = false;

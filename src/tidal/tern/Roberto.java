@@ -102,6 +102,8 @@ public class Roberto extends View implements Debugger {
    /** Animation completed */
    private boolean completed = false;
    
+   protected boolean reIntrep = false;
+   
    private SoundPool sounds;
    private int beepSound;
    private Drawable entry = null;
@@ -153,6 +155,7 @@ public class Roberto extends View implements Debugger {
       if (action == MotionEvent.ACTION_DOWN) {
          this.tsensor = true;
          if (completed) {  replay_request = true; listCounter = 0; replay(); }
+         //if (reIntrep) {reIntrep = false; tern.startCompile();} //ADDED
 		   
       } else if (action == MotionEvent.ACTION_UP) {
          if (! running ) tern.onClick(this);
@@ -274,7 +277,7 @@ public class Roberto extends View implements Debugger {
           
       }//isPlaying
       
-      if (completed) {
+      if (completed) { // if (reIntrep)
   		  // draw replay button
     	  dw = replay.getIntrinsicWidth();
           dh = replay.getIntrinsicHeight();
@@ -481,7 +484,12 @@ public class Roberto extends View implements Debugger {
    
    
    public int doDance(int [] args) {
-      return 0;
+       return 0;
+   }
+   
+   public int doWait(int [] args) {
+	   Log.i(TAG, "Wait function called");
+	   return 0;
    }
    
    
@@ -501,7 +509,9 @@ public class Roberto extends View implements Debugger {
 	   Log.i(TAG,"processStopped Called");
 	   Log.i(TAG, "sequence = " + sequenceList.size());
 	   Log.i(TAG, "Counter = " + listCounter);
-	   completed = true;  
+	   completed = true;  //COMMENTED
+	   //reIntrep = true; //ADDED
+	   //clearAnimation();//ADDED
 	   isPlaying = false;
 	   repaint();
    }
@@ -515,7 +525,7 @@ public class Roberto extends View implements Debugger {
    
    public void clearAnimation() {
 	   //newPose = false;
-	   this.running = false;
+	   this.running = false;// commented
 	   sequenceList.clear();
 	   DrawableList.clear();
 	   listCounter = 0;
@@ -529,6 +539,8 @@ public class Roberto extends View implements Debugger {
    
    public void error(Process p, String message) {
       Log.i(TAG, message);
+      clearAnimation();
       this.running = false;
+      
    }
 }

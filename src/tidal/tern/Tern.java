@@ -134,13 +134,13 @@ public class Tern extends Activity implements OnClickListener, Runnable {
    public void onBackPressed() {
 	   roberto.clearAnimation();
 	   Log.i(TAG,"animation cleared");
-	   this.interp.clear();
-	   //roberto.reIntrep = false;//ADDED
-	   //roberto.running = false; //ADDED
-	   roberto.changePicture("null",-1); 
+	  // this.interp.clear();
+	   //roberto.reIntrep = false;
+	   roberto.running = false;
+	   this.roberto.invalidate();
 	   
    return;
-   }//*/
+   }
     
 //----------------------------------------------------------------
 // onClick -- Called by the compile/camera button

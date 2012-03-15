@@ -94,27 +94,19 @@ public class Roberto extends View implements Debugger {
    private long last_tick = 0;
    
    /** Is there a new pose to be drawn */
-   boolean newPose = true;
+   private boolean newPose = true;
    
-   /** Replay button clicked */
-   private boolean replay_request = false;
-   
-   /** Animation completed */
-   private boolean completed = false;
-   
+   /** Replay button is pressed */
    protected boolean reIntrep = false;
+   
+   private boolean change = true;
    
    private SoundPool sounds;
    private int beepSound;
    private Drawable entry = null;
    private Drawable logo;
    private Drawable button;
-   private Drawable replay;
-   
-   
-   //private ArrayList<Drawable> PlayingList = new ArrayList<Drawable>();
-   //private ArrayList<ArrayList<Drawable>> sequenceList = new ArrayList<ArrayList<Drawable>>();
-
+   private String currentPose = null;
    
    
    public Roberto(Context context) {
@@ -129,7 +121,6 @@ public class Roberto extends View implements Debugger {
       Resources res = getContext().getResources();
       logo = res.getDrawable(R.drawable.logo);
       button = res.getDrawable(R.drawable.play_button_up);
-      replay = res.getDrawable(R.drawable.replay);
 
       //populate the number of frames for each pose...
       frameCount.put("walk", 5);
@@ -141,6 +132,7 @@ public class Roberto extends View implements Debugger {
       frameCount.put("stand", 1);
       frameCount.put("yawn", 1);
       frameCount.put("sit", 1);
+      frameCount.put("replay",1);
       
    }
    
@@ -154,13 +146,12 @@ public class Roberto extends View implements Debugger {
       int action = event.getAction();
       if (action == MotionEvent.ACTION_DOWN) {
          this.tsensor = true;
-         if (completed) {  replay_request = true; listCounter = 0; replay(); }
-         //if (reIntrep) {reIntrep = false; tern.startCompile();} //ADDED
+         if (reIntrep) { clearAnimation(); tern.finishCompile(true); }
 		   
       } else if (action == MotionEvent.ACTION_UP) {
          if (! running ) tern.onClick(this);
       }
-      //invalidate();
+      
       return true;
    }
 
@@ -171,8 +162,9 @@ public class Roberto extends View implements Debugger {
       int h = getHeight();
       int dx, dy, dw, dh;
       float ds;
-      String currentPose;
+      
       Drawable current = null;
+
       // clear background 
       canvas.drawRGB(210, 210, 210);
       
@@ -198,9 +190,11 @@ public class Roberto extends View implements Debugger {
       
       // Draw roberto 
       else if (isPlaying) {
+    	  change = false;
     	  
-    	  //if the program has a new pose, get it's name and number of frames, 
-    	  //and populate a list of drawables to animate the new pose.
+    	  /** if the program has a new pose, get it's name and number of frames, 
+    	  	  and populate a list of drawables to animate the new pose. */
+    	  
     	  if (newPose) {
     		  currentPose = sequenceList.get(listCounter);
     		  int total = frameCount.get(currentPose);
@@ -211,15 +205,16 @@ public class Roberto extends View implements Debugger {
     		  
     		  for (int x=1; x <= total; x++) {
     			  String name = currentPose + "0" + x;
-    			  int res_id = getContext().getResources().getIdentifier(name, "drawable", "tidal.tern");   
-			      entry = getContext().getResources().getDrawable(res_id);
-			      try { DrawableList.add(entry); }
-			      catch (Exception r) { Log.i(TAG, "Not able to add to list: " + name);}
-			      entry.setCallback(null);
-			      entry = null;
+    			  int res_id = getContext().getResources().getIdentifier(name, "drawable", "tidal.tern");
+    			  entry = getContext().getResources().getDrawable(res_id);
+    			  try { DrawableList.add(entry); }
+    			  catch (Exception r) { Log.i(TAG, "Not able to add to list: " + name);}
+    			  entry.setCallback(null);
+    			  entry = null;
 			   }
     		  
     		  newPose = false;
+    		  
     		  sounds.play(beepSound, 1.0f, 1.0f, 0, 0, 1.0f);
     	  }
     	  
@@ -228,7 +223,7 @@ public class Roberto extends View implements Debugger {
           if (elapsed >= Duration) {
         	  if (frame < DrawableList.size()) {
         		  last_tick = System.currentTimeMillis();
-                  current = DrawableList.get(frame);
+        		  current = DrawableList.get(frame);
                   dw = current.getIntrinsicWidth() / 2;
                   dh = current.getIntrinsicHeight() / 2;
                   dx = w/2 - dw/2;
@@ -240,23 +235,12 @@ public class Roberto extends View implements Debugger {
                   frame++;
                   
                   if (frame < DrawableList.size())//second check after increment to hold on to the last frame
-                  repaint();  
-                  else { 
-                	  if (replay_request){ 
-                		  if (listCounter < sequenceList.size()) {
-                			  //newPose = true;
-                    		  //isPlaying = true;
-                    		  //completed = false;
-                    		  //repaint();
-                			  replay();
-                		  }
-                		  else { completed = true; repaint(); }
-                	  }
-                	  
-                  }//*/
+                	  repaint();
+                  
+                  else { change = true; isPlaying = false; Log.i(TAG, "finished with "+currentPose); }
         	  }
         	  
-        	  else { isPlaying = false;}
+        	  
             	  
           }
           
@@ -275,87 +259,23 @@ public class Roberto extends View implements Debugger {
         	  }     
           }
           
-      }//isPlaying
+      }
       
-      if (completed) { // if (reIntrep)
-  		  // draw replay button
-    	  dw = replay.getIntrinsicWidth();
-          dh = replay.getIntrinsicHeight();
-          ds = Math.min(0.8f, 0.8f * w / dw);
-          dw *= ds;
-          dh *= ds;
-          replay.setBounds(w/2 - dw/2, 70, w/2 + dw/2, 70 + dh);
-          replay.draw(canvas);
-          replay_request = false;
+      
           
-          //write replay in text
-          Paint font = new Paint(Paint.ANTI_ALIAS_FLAG);
-          font.setColor(Color.WHITE);
-          font.setStyle(Style.FILL);
-          font.setTextSize(40);
-          font.setTextAlign(Paint.Align.CENTER);
-          canvas.drawText("replay", w/2, h/2, font);
-          
-  	  }
-     /** else if (isPlaying) {
-    	  
-    	  if (newPose) {
-    		  ///Log.i(TAG, "starting animation for " + this.message);
-    		  PlayingList = sequenceList.get(listCounter);
-    		  listCounter++;
-    		  frame = 0;
-    		  sounds.play(beepSound, 1.0f, 1.0f, 0, 0, 1.0f);
-    	  }
-          
-          long elapsed = (System.currentTimeMillis() - last_tick);
-          
-          if (elapsed >= Duration) {
-        	  
-        	  last_tick = System.currentTimeMillis();
-              //current = DrawableList.get(frame);
-              current = PlayingList.get(frame);   
-              dw = current.getIntrinsicWidth() / 2;
-              dh = current.getIntrinsicHeight() / 2;
-              dx = w/2 - dw/2;
-              dy = h/2 - dh/2;
-              current.setBounds(dx, dy, dx + dw, dy + dh);
-              current.draw(canvas);
-              current.setCallback(null);
-   	       	  current = null;
-
-              frame++;
-              newPose = false;
-              //if (frame < DrawableList.size())
-              if (frame < PlayingList.size())
-            	  repaint();
-            	  //postInvalidate();
-              else {
-            	  isPlaying = false;
-            	  animation_completed = true;
-            	  PlayingList.clear();
-            	  PlayingList = null;
-              }
-            	  
-          }
-          else {
-              // current = DrawableList.get(frame);
-        	  current = PlayingList.get(frame);
-              dw = current.getIntrinsicWidth() / 2;
-              dh = current.getIntrinsicHeight() / 2;
-              dx = w/2 - dw/2;
-              dy = h/2 - dh/2;
-              current.setBounds(dx, dy, dx + dw, dy + dh);
-              current.draw(canvas);
-              current.setCallback(null);
-   	       	  current = null;
-              newPose = false;
-              //postInvalidate();   
-              repaint();
-                
-          }//within duration
-          
-      }//*/
-   
+      /** Because the interpreter runs very fast when "replaying" we need to add this "if" statement
+          inside the onDraw method */
+      
+      if (listCounter < sequenceList.size() && change) {
+  		  //get next pose
+    	  change = false;
+  		  isPlaying = true;	   
+  		  newPose = true;	  
+  		  Log.i(TAG, "called inside onDraw");
+  		  repaint(); 
+      }
+      
+     
    }
    
    
@@ -378,118 +298,83 @@ public class Roberto extends View implements Debugger {
    protected void changePicture(String img, int f) {
 	   if (f>0) { 
 		   sequenceList.add(img);
-		   Log.i(TAG,"SEQUENCE ADDED for " +img);
-		   isPlaying = true;
-		   newPose = true;
+		   Log.i(TAG,"ADDED " + img + " sequence size = "+ sequenceList.size());
+		   Log.i(TAG, "listCounter = " + listCounter);
+		   //isPlaying = true;
+		   //newPose = true;
 	   }
 	   
-	   Log.i(TAG,"sequence= "+ sequenceList.size());
-	   repaint();
-	   /*
-	   if (f > 0) {
-		   Log.i(TAG, "change picture");
-		   //DrawableList.clear();
-		   
-		   for (int x = 1; x <= f; x++) {
-		       String name = img+ "0" + x;
-		       int res_id = getContext().getResources().getIdentifier(name, "drawable", "tidal.tern");   
-		       entry = getContext().getResources().getDrawable(res_id);
-		       	
-		       try {
-		    	   DrawableList.add(entry);
-		       }
-		       
-		       catch (Exception r) {
-		       	Log.i(TAG, "Not able to add to list: " + name);
-		       }
-		       entry.setCallback(null);
-		       entry = null;
-	      }
-		   
-		  try {
-			  sequenceList.add(DrawableList);
-		  }
-		  catch (Exception r) {
-		       	Log.i(TAG, "sequence list error on " + img);
-		       }
-		  DrawableList = new ArrayList<Drawable>();
-	      isPlaying = true;
-	      newPose = true;
-	   }
-      repaint();//*/
+	   
+	   /** repaint if we have an additional pose and ONLY after the previous pose is fully animated,
+       not confirming that the previous pose is completed will result in overwriting the list,
+       resulting in cutting the number of frames. */
+	   
+	   if (listCounter < sequenceList.size() && change) {
+	  		isPlaying = true;	   
+	  		newPose = true;	   
+	  		Log.i(TAG,"called inside changePic");
+	  		repaint();
+	  	}
+	 
    }
      
    
    public int doJump(int [] args) {
-	   changePicture("jump",5);  
-       //this.message = "Jump";   	   
+	   changePicture("jump",5);     	   
        return 0;
    }
    
    
    public int doRun(int [] args) {
-	   changePicture("run",1);  
-       //this.message = "Run";   	   
+	   changePicture("run",1);   
        return 0;
    }
    
    
    public int doWalk(int [] args) {
-	  changePicture("walk",5);
-      //this.message = "Walk";   	   
+	  changePicture("walk",5);	   
       return 0;
    }
    
    
    public int doWiggle(int [] args) {
-	  changePicture("wiggle",6);
-      //this.message = "Wiggle";   	   
+	  changePicture("wiggle",6); 	   
       return 0;
    }
    
    
    public int doSleep(int [] args) {
-	   changePicture("sleep",1);  
-       //this.message = "Sleep";   	   
+	   changePicture("sleep",1);   	   
        return 0;
    }
    
    
    public int doSit(int [] args) {
-	   changePicture("jump",5);  
-       //this.message = "Sit";   	   
+	   changePicture("yawn",1); 
        return 0;
    }
    
    
    public int doYawn(int [] args) {
-	   changePicture("yawn",1);  
-       //this.message = "Yawn";   	   
+	   changePicture("yawn",1);   	   
        return 0;
    }
    
    
    public int doStand(int [] args) {
-	   changePicture("stand",1);  
-       //this.message = "Stand";   	   
+	   changePicture("stand",1);  	   
        return 0;
    }
    
    
    public int doSpin(int [] args) {
-	   changePicture("spin",6);  
-       //this.message = "Spin";   	   
+	   changePicture("spin",6);   	   
        return 0;
    }
    
    
    public int doDance(int [] args) {
        return 0;
-   }
-   
-   public int doWait(int [] args) {
-	   Log.i(TAG, "Wait function called");
-	   return 0;
    }
    
    
@@ -506,31 +391,18 @@ public class Roberto extends View implements Debugger {
    }
    
    public void processStopped(Process p) {
-	   Log.i(TAG,"processStopped Called");
-	   Log.i(TAG, "sequence = " + sequenceList.size());
-	   Log.i(TAG, "Counter = " + listCounter);
-	   completed = true;  //COMMENTED
-	   //reIntrep = true; //ADDED
-	   //clearAnimation();//ADDED
-	   isPlaying = false;
-	   repaint();
-   }
-   
-   private void replay() {
-	   completed = false;
-	   isPlaying = true;
-	   newPose = true;
-	   repaint();   
+	   Log.i(TAG,"processStopped Called with sequence size = " + sequenceList.size());
+	   reIntrep = true;
+	   changePicture("replay",1);
    }
    
    public void clearAnimation() {
-	   //newPose = false;
-	   this.running = false;// commented
 	   sequenceList.clear();
 	   DrawableList.clear();
 	   listCounter = 0;
 	   frame = 0;
-	   completed = false;
+	   reIntrep = false;
+	   tern.interp.clear();
    }
    
    public void trace(Process p, String message) { }
